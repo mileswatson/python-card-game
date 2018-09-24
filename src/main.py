@@ -5,62 +5,70 @@ from hashlib import sha256
 app = appJar.gui("Cardography")
 directory = ""
 db = None
-player1 = "1"
-player2 = "2"
+cursor = None
 
-def dummy(btn=None):
-    ChooseGame.stop()
+players = [-1, -1]
 
-class ChooseAuthentication:
-
-    btn = ""
-
+class Login:
+    player = -1
     @staticmethod
     def preload():
-        app.startSubWindow("ChooseAuthentication", modal=True)
-        app.addNamedButton("Login", "ChooseAuthentication.Login", ChooseAuthentication.back)
-        app.addNamedButton("Cancel","ChooseAuthentication.Cancel", ChooseAuthentication.back)
-        app.setStopFunction(ChooseAuthentication.back)
+        app.startSubWindow("Login")
+        app.addEntry("Login.Username")
+        app.setEntryDefault("Login.Username", "Username")
+        app.addSecretEntry("Login.Password")
+        app.setEntryDefault("Login.Password", "Password")
+        app.addNamedButton("Submit", "Login.Submit", Login.authenticate)
+        app.setStopFunction(Login.back)
         app.stopSubWindow()
-
-    @staticmethod
-    def go(btn=None):
-        ChooseAuthentication.btn = btn
-        app.showSubWindow("ChooseAuthentication")
     
     @staticmethod
-    def resume(btn=None):
-        pass
+    def go(btn=None):
+        app.clearAllEntries()
+        Login.player = int(btn[-1])
+        #print("player", Login.player)
+        app.showSubWindow("Login")
+    
+    @staticmethod
+    def authenticate(btn=None):
+        username = app.getEntry("Login.Username")
+        password = sha256((username+app.getEntry("Login.Password")).encode()).digest()
+        app.clearAllEntries()
+        cursor.execute('''
+            SELECT id FROM users WHERE username=? AND password=?
+        ''', (username, password))
+        players[Login.player] = cursor.fetchone()[0]
+        if players[Login.player] == None or players[Login.player] == players[(Login.player+1)%2]:
+            players[Login.player] = -1
+        Login.back()
     
     @staticmethod
     def back(btn=None):
-        app.hideSubWindow("ChooseAuthentication")
-        if btn == "ChooseAuthentication.Login":
-            SelectPlayers.resume(ChooseAuthentication.btn)
-        else:
-            SelectPlayers.resume(None)
-
+        app.clearAllEntries()
+        app.hideSubWindow("Login")
+        SelectPlayers.resume()
 
 class SelectPlayers:
 
     @staticmethod
     def preload():
         app.startSubWindow("Select Players")
-        app.addNamedButton("", "SelectPlayers.Player1", ChooseAuthentication.go)
+        app.addNamedButton("", "SelectPlayers.Player0", SelectPlayers.login)
+        app.addLabel("SelectPlayers.Username0", "   Username: ")
+        app.addLabel("SelectPlayers.HighScore0", "   High Score: ")
+        app.addEmptyLabel("SelectPlayers.Empty0")
+        app.addNamedButton("", "SelectPlayers.Player1", SelectPlayers.login)
         app.addLabel("SelectPlayers.Username1", "   Username: ")
         app.addLabel("SelectPlayers.HighScore1", "   High Score: ")
         app.addEmptyLabel("SelectPlayers.Empty1")
-        app.addNamedButton("", "SelectPlayers.Player2", ChooseAuthentication.go)
-        app.addLabel("SelectPlayers.Username2", "   Username: ")
-        app.addLabel("SelectPlayers.HighScore2", "   High Score: ")
-        app.addEmptyLabel("SelectPlayers.Empty2")
-        app.addButton("Back", SelectPlayers.back)
+        app.addNamedButton("Back", "SelectPlayers.Back", SelectPlayers.back)
         app.setStopFunction(SelectPlayers.back)
         app.stopSubWindow()
 
     @staticmethod
     def go():
         global db
+        global cursor
         db = sql.connect(directory+"/"+"users.dbf")
         cursor = db.cursor()
         cursor.execute('''
@@ -72,22 +80,49 @@ class SelectPlayers:
             cursor.execute('''
                 CREATE TABLE users(
                     id          INTEGER PRIMARY KEY,
-                    username    TEXT,
+                    username    VARCHAR(16),
                     password    CHAR(32),
-                    best        INTEGER,
-                    used        INTEGER
+                    best        INTEGER
                 )
             ''')
             db.commit()
+        app.setButton("SelectPlayers.Player0", "")
+        app.setLabel("SelectPlayers.Username0", "   Username: ")
+        app.setLabel("SelectPlayers.HighScore0", "   High Score: ")
         app.setButton("SelectPlayers.Player1", "")
-        app.setButton("SelectPlayers.Player2", "")
+        app.setLabel("SelectPlayers.Username1", "   Username: ")
+        app.setLabel("SelectPlayers.HighScore1", "   High Score: ")
         app.showSubWindow("Select Players")
     
     @staticmethod
+    def login(btn=None):
+        app.hideSubWindow("Select Players")
+        Login.go(btn)
+
+    @staticmethod
     def resume(btn=None):
-        if btn != None:
-            app.setButton(btn, player1 if btn[-1] == "1" else player2)
-            
+        if players[0] >= 0:
+            app.setButton("SelectPlayers.Player0", "Authenticated")
+            cursor.execute("SELECT username, best FROM users WHERE id=?", (players[0],))
+            username, best = cursor.fetchone()
+            print(username, best)
+            app.setLabel("SelectPlayers.Username0", "   Username: "+username)
+            app.setLabel("SelectPlayers.HighScore0","    Best: "+str(best))
+        else:
+            app.setButton("SelectPlayers.Player0", "")
+            app.setLabel("SelectPlayers.Username0", "   Username: ")
+            app.setLabel("SelectPlayers.HighScore0", "   High Score: ")
+        if players[1] >= 0:
+            app.setButton("SelectPlayers.Player1", "Authenticated")
+            cursor.execute("SELECT username, best FROM users WHERE id=?", (players[1],))
+            username, best = cursor.fetchone()
+            app.setLabel("SelectPlayers.Username1", "   Username: "+username)
+            app.setLabel("SelectPlayers.HighScore1","    Best: "+str(best))
+        else:
+            app.setButton("SelectPlayers.Player1", "")
+            app.setLabel("SelectPlayers.Username1", "   Username: ")
+            app.setLabel("SelectPlayers.HighScore1", "   High Score: ")
+        app.showSubWindow("Select Players")
     
     @staticmethod
     def back(btn=None):
@@ -130,6 +165,6 @@ class ChooseGame:
 
 ChooseGame.preload()
 SelectPlayers.preload()
-ChooseAuthentication.preload()
+Login.preload()
 
 ChooseGame.go()
