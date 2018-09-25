@@ -26,6 +26,7 @@ class Signup:
         app.clearAllEntries()
         app.showSubWindow("Signup")
     
+    @staticmethod
     def authenticate(btn=None):
         username = app.getEntry(" Username: ")
         #################################################################
