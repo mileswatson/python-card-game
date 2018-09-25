@@ -9,15 +9,36 @@ cursor = None
 
 players = [-1, -1]
 
+class Signup:
+
+    @staticmethod
+    def preload():
+        app.startSubWindow("Signup")
+        app.addLabelEntry(" Username: ")
+        app.addSecretLabelEntry("First password: ")
+        app.addSecretLabelEntry("Second password: ")
+        app.addNamedButton("Submit", "Login.Submit", Signup.authenticate)
+        app.setStopFunction(Signup.back)
+        app.stopSubWindow()
+    
+    @staticmethod
+    def go():
+        app.clearAllEntries()
+        app.showSubWindow("Signup")
+    
+    def authenticate(btn=None):
+        username = app.getEntry(" Username: ")
+        #################################################################
+
 class Login:
     player = -1
     @staticmethod
     def preload():
         app.startSubWindow("Login")
-        app.addEntry("Login.Username")
-        app.setEntryDefault("Login.Username", "Username")
-        app.addSecretEntry("Login.Password")
-        app.setEntryDefault("Login.Password", "Password")
+        app.addLabelEntry("Username: ")
+        #app.setEntryDefault("Login.Username", "Username")
+        app.addSecretLabelEntry("Password: ")
+        #app.setEntryDefault("Login.Password", "Password")
         app.addNamedButton("Submit", "Login.Submit", Login.authenticate)
         app.setStopFunction(Login.back)
         app.stopSubWindow()
@@ -31,8 +52,8 @@ class Login:
     
     @staticmethod
     def authenticate(btn=None):
-        username = app.getEntry("Login.Username")
-        password = sha256((username+app.getEntry("Login.Password")).encode()).digest()
+        username = app.getEntry("Username: ")
+        password = sha256((username+app.getEntry("Password: ")).encode()).digest()
         app.clearAllEntries()
         cursor.execute('''
             SELECT id FROM users WHERE username=? AND password=?
@@ -105,7 +126,6 @@ class SelectPlayers:
             app.setButton("SelectPlayers.Player0", "Authenticated")
             cursor.execute("SELECT username, best FROM users WHERE id=?", (players[0],))
             username, best = cursor.fetchone()
-            print(username, best)
             app.setLabel("SelectPlayers.Username0", "   Username: "+username)
             app.setLabel("SelectPlayers.HighScore0","    Best: "+str(best))
         else:
