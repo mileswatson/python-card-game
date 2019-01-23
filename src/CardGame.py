@@ -845,7 +845,7 @@ class Game(Window):
             self.turn = self.turn + 1
 
     # empty function that appJar requires for a button
-    def doNothing():
+    def doNothing(btn=None):
         pass
 
 # a class that represents an instance of a card object   
