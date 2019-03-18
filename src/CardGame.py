@@ -615,7 +615,7 @@ class CreateAccount(Window):
             self.parent.name
         )
 
-# a class that handles password changin, inherits from the Window class
+# a class that handles password changing, inherits from the Window class
 class ChangePassword(Window):
 
     # function fo change the password, if all tests are passed
@@ -664,6 +664,7 @@ class ChangePassword(Window):
                     "Your password has been changed successfully!",
                     self.parent.name
                 )
+                return
 
         # tells the user they have entered incorrect login details
         errorBox(
@@ -845,7 +846,7 @@ class Game(Window):
             self.turn = self.turn + 1
 
     # empty function that appJar requires for a button
-    def doNothing(btn=None):
+    def doNothing():
         pass
 
 # a class that represents an instance of a card object   
